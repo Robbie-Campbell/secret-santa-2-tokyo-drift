@@ -11,12 +11,7 @@ class Person:
 
 
 def create_people_array():
-    return [Person("robbielcampbell@hotmail.com", "Rab", ["Kelly"]), Person("jerseyjack.jr@gmail.com", "Jack", []),
-            Person("lauren_eady@hotmail.co.uk", "Lauren", ["Tom"]),
-            Person("kellybailey0711@gmail.com", "Kelly", ["Rab"]),
-            Person("hannahlb215@gmail.com", "Hannah", ["Caleb"]), Person("james@castleb.org.uk", "James", []),
-            Person("caleb.fortune@hotmail.co.uk", "Caleb", ["Hannah"]),
-            Person("tjpeacocks@gmail.com", "Tom", ["Lauren"]), Person("up900637@myport.ac.uk", "Joe", [])]
+    return []
 
 
 def get_random_person_from_list(arr):
@@ -55,17 +50,3 @@ def get_valid_email_list():
 
 
 print(get_valid_email_list())
-
-
-# def send_emails():
-#     for x, y in email_list:
-#         msg = MIMEText(y, "html")
-#         msg["Subject"] = "Secret Santa Test (THIS ISN'T THE REAL ONE)"
-#         msg["From"] = sender
-#         msg["To"] = ",".join(x)
-#         s = smtplib.SMTP_SSL(host="smtp.gmail.com", port=465)
-#         s.login(user=sender, password="JoeManEmpire1120")
-#         s.sendmail(sender, x, msg.as_string())
-#
-#
-# send_emails()
