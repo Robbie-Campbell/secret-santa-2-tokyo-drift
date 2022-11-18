@@ -1,35 +1,22 @@
 import os
 import sys
 
-import smtplib
+import smtplib, ssl
 from email.mime.image import MIMEImage
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from random import choice
+from secrets import people_array, sender, password
 
-sys.setrecursionlimit(5000)
-
-
-class Person:
-    def __init__(self, email, name, do_not_send):
-        self.email = email
-        self.name = name
-        self.do_not_send = do_not_send
+sys.setrecursionlimit(2000)
 
 
 class Generator:
     def __init__(self):
-        self.people_array = [Person("#######", "#######", ["#######"]),
-                             Person("#######", "#######", []),
-                             Person("#######", "#######", ["#######"]),
-                             Person("#######", "#######", ["#######"]),
-                             Person("#######", "#######", []),
-                             Person("#######", "#######", []),
-                             Person("#######", "#######", ["#######"]),
-                             Person("#######", "#######", [])]
+        self.people_array = people_array
         self.used_people = []
         self.decided_santa_list = dict()
-        self.sender = "#######@gmail.com"
+        self.sender = sender
         self.email_list = self.get_valid_email_list()
 
     def check_person_is_valid_for_santa(self, santa, count=0):
@@ -50,10 +37,17 @@ class Generator:
         while True:
             self.add_santa_present_receiver_to_email_list()
             if False in self.decided_santa_list.values():
-                self.decided_santa_list.clear()
-                return self.get_valid_email_list()
+                return self.recursion_error_or_try_to_find_another_valid_list()
             if len(self.decided_santa_list.values()) == len(self.people_array):
                 return self.decided_santa_list
+
+    def recursion_error_or_try_to_find_another_valid_list(self):
+        try:
+            self.decided_santa_list.clear()
+            return self.get_valid_email_list()
+        except RecursionError:
+            return f"Couldn't find a solution, please try again! (it is possible your list has a solution, but i " \
+                   f"was not able to find it in {sys.getrecursionlimit()} tries)"
 
     def add_santa_present_receiver_to_email_list(self):
         santa = self.get_random_person_from_list()
@@ -72,9 +66,15 @@ class Generator:
 
     def send_email_single(self, santa):
         message = self.construct_message(santa)
-        s = smtplib.SMTP_SSL(host="smtp.gmail.com", port=465)
-        s.login(user=self.sender, password="#######")
-        s.sendmail(self.sender, santa, message.as_string())
+        context = ssl.create_default_context()
+        with smtplib.SMTP("smtp.gmail.com", 25) as s:
+            s.connect('smtp.gmail.com', 587)
+            s.ehlo()
+            s.starttls(context=context)
+            s.ehlo()
+            s.login(user=self.sender, password=password)
+            s.sendmail(self.sender, santa, message.as_string())
+            print("sent", santa)
 
     def construct_message(self, santa):
         message = MIMEMultipart('related')
@@ -98,4 +98,6 @@ class Generator:
         return message
 
 
-Generator().send_fancy_emails()
+if __name__ == "__main__":
+    generator = Generator()
+    generator.send_fancy_emails()
