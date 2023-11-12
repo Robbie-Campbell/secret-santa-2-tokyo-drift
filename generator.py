@@ -3,6 +3,10 @@ import sys
 
 import smtplib
 import ssl
+from itertools import chain
+from collections import Counter
+
+from validate_email_address import validate_email
 from email.mime.image import MIMEImage
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -19,11 +23,40 @@ class Generator:
     Class which generates a list of candidates to send Secret Santa emails to.
     """
     def __init__(self) -> None:
-        self.people_array: List[Person] = people_one
+        self.people_array: List[Person] = self.validate_people_array(people_one)
         self.used_people = []
         self.decided_santa_list = dict()
         self.sender: str = sender
         self.email_list = self.get_valid_email_list()
+
+    def validate_people_array(self, people_list: List[Person]) -> List[Person]:
+        """
+        Validates a people array before running the program, makes sure all do_not_send users are valid and that all
+        email addresses are reachable.
+        :param people_list: The list of people to validate.
+        :return: The original people list if all checks are passed.
+        """
+        # First we check if the do not send list is valid.
+        all_people_names: List[str] = [person.name for person in people_list]
+        all_invalid_people: List[str] = list(chain.from_iterable(person.do_not_send for person in people_list))
+        for name in all_invalid_people:
+            if name not in all_people_names:
+                raise ValueError(f"Invalid People List is not correctly configured, could not find '{name}' "
+                                 f"in {all_people_names}")
+
+        # Double Check for duplicates.
+        grouped_names: Counter = Counter(all_people_names)
+        duped_names: dict = {key: value for key, value in grouped_names.items() if value > 1}
+        if len(duped_names) > 0:
+            raise ValueError(f"Found the following duplicated names in the list: "
+                             f"{', '.join([f'{key}: {value}' for key, value in duped_names.items()])}")
+
+        # Check to make sure all email addresses are valid.
+        for email in [person.email for person in people_list]:
+            if not validate_email(email, True, True):
+                raise ValueError(f"The email '{email}' is not valid.")
+
+        return people_list
 
     def get_valid_email_list(self) -> dict:
         """
@@ -115,7 +148,7 @@ class Generator:
             s.starttls(context=context)
             s.ehlo()
             s.login(user=self.sender, password=password)
-            s.sendmail(self.sender, santa, message.as_string())
+            # s.sendmail(self.sender, santa, message.as_string())
             print("sent", santa)
 
     def construct_message(self, santa: str) -> MIMEMultipart:
@@ -135,7 +168,7 @@ class Generator:
         image.close()
         santa_clause.add_header("Content-ID", "<santa>")
         message_text = MIMEText(f"<h1>It's Christmas time!</h1><br><p>It's time to celebrate christmas "
-                                f"and i'm your secret santa! Don't tell anyone, but you have <h1>{self.email_list[present_receiver]}</h1> as "
+                                f"and i'm your secret santa! Don't tell anyone, but you have <h1>{self.email_list[santa]}</h1> as "
                                 f"your present receiver, good luck and have a <b>Merry Christmas!</b><br>"
                                 f"<img src='cid:santa'>!", 'html')
         message_alt.attach(message_text)
@@ -143,8 +176,3 @@ class Generator:
         message['To'] = santa
         message.attach(santa_clause)
         return message
-
-
-if __name__ == "__main__":
-    generator = Generator()
-    generator.send_fancy_emails()
